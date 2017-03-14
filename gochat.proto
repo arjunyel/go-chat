@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+package gochat;
+
+service GroupChat {
+  rpc Chat (SendChat) returns (ReceiveChat) {}
+}
+
+message SendChat {
+    string name = 1;
+    string message = 2;
+}
+
+message ReceiveChat {
+    string name = 1;
+    string message = 2;
+}
