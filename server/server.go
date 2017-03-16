@@ -1,10 +1,9 @@
 package main
 
 import (
+	"io"
 	"log"
 	"net"
-
-	"golang.org/x/net/context"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
@@ -18,11 +17,18 @@ const (
 
 type server struct{}
 
-func (s *server) Chat(ctx context.Context, in *pb.SendChat) (*pb.ReceiveChat, error) {
-	clientName := in.Name
-	clientMessage := in.Message
-
-	return &pb.ReceiveChat{Name: clientName, Message: clientMessage}, nil
+func (s *server) Chat(stream pb.GroupChat_ChatServer) error {
+	in, err := stream.Recv()
+	if err == io.EOF {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	if err := stream.Send(in); err != nil {
+		return err
+	}
+	return nil
 }
 
 func main() {

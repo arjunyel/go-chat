@@ -58,7 +58,7 @@ func main() {
 		}
 
 		// Gets the response of the shell comm and from the server.
-		res, err := c.Chat(context.Background(), &pb.SendChat{Name: cmdName, Message: cmdArgs})
+		res, err := c.Chat(client pb.GroupChatClient)
 
 		if err != nil {
 			log.Fatalf("Command failed: %v", err)
