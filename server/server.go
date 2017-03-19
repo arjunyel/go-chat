@@ -40,7 +40,14 @@ func doesGroupExist(group string) bool {
 func addUser(group string, user userInfo) {
 	directory.Lock()
 	defer directory.Unlock()
-	_ = append(directory.groups[group], user)
+	dirct := directory.groups[group]
+	dirct = append(dirct, user)
+	directory.groups[group] = dirct
+	fmt.Println("adding User")
+	fmt.Println(user)
+	fmt.Println(dirct)
+	fmt.Println(directory.groups[group])
+
 }
 
 func createGroup(group string, user userInfo) {
@@ -57,6 +64,7 @@ func register(group string, user userInfo) {
 		return
 	}
 	createGroup(group, user)
+	fmt.Println(directory.groups)
 	return
 
 }
@@ -70,6 +78,8 @@ func sendMessage(message pb.ChatMessage) {
 			user.channel <- message
 		}
 	}
+	fmt.Println(message)
+	fmt.Println(directory.groups)
 
 }
 func monitorOutbox(stream pb.GroupChat_ChatServer, message chan<- pb.ChatMessage) {
@@ -77,6 +87,7 @@ func monitorOutbox(stream pb.GroupChat_ChatServer, message chan<- pb.ChatMessage
 	if err != nil {
 		fmt.Println(err)
 	}
+	fmt.Println(msg)
 	message <- *msg
 }
 

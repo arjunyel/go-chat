@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"strings"
 
 	"golang.org/x/net/context"
 
@@ -22,20 +21,22 @@ func listen(stream pb.GroupChat_ChatClient, inbox chan pb.ChatMessage) {
 	inbox <- *msg
 }
 
-func send(outbox chan pb.ChatMessage, r *bufio.Reader, name string, group string) {
-	msg, _ := r.ReadString('\n')
-	msg = strings.TrimSpace(msg)
-	outbox <- pb.ChatMessage{Name: name, Message: msg, Group: group}
+func send(outbox chan pb.ChatMessage, r *bufio.Scanner, name string, group string) {
+	for r.Scan() {
+		fmt.Println("sending Message")
+		outbox <- pb.ChatMessage{Name: name, Message: r.Text(), Group: group}
+	}
+
 }
 
 func main() {
-	r := bufio.NewReader(os.Stdin)
+	r := bufio.NewScanner(os.Stdin)
 
 	// Read the server address
-	fmt.Print("Please specify the server IP: ")
+	/*fmt.Print("Please specify the server IP: ")
 	address, _ := r.ReadString('\n')
-	address = strings.TrimSpace(address)
-	address = address + port
+	address = strings.TrimSpace(address)*/
+	address := "localhost" + port
 
 	// Set up a connection to the server.
 	conn, err := grpc.Dial(address, grpc.WithInsecure())
@@ -52,17 +53,12 @@ func main() {
 
 	fmt.Printf("\nYou have successfully connected to %s! To disconnect, hit ctrl+c or type exit.\n", address)
 	fmt.Println("Enter your name: ")
-	name, err := r.ReadString('\n')
-	if err != nil {
-		return
-	}
-	name = strings.TrimSpace(name)
+	r.Scan()
+	name := r.Text()
+
 	fmt.Println("\nEnter your group: ")
-	group, err := r.ReadString('\n')
-	if err != nil {
-		return
-	}
-	group = strings.TrimSpace(group)
+	r.Scan()
+	group := r.Text()
 	stream, err := c.Chat(context.Background())
 	if err != nil {
 		return
