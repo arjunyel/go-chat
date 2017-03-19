@@ -9,4 +9,5 @@ service GroupChat {
 message ChatMessage {
     string name = 1;
     string message = 2;
+    string group = 3;
 }

@@ -2,11 +2,12 @@ package main
 
 import (
 	"bufio"
-	"context"
 	"fmt"
 	"log"
 	"os"
 	"strings"
+
+	"golang.org/x/net/context"
 
 	pb "github.com/arjunyel/go-chat"
 	"google.golang.org/grpc"
@@ -15,6 +16,17 @@ import (
 const (
 	port = ":12893"
 )
+
+func listen(stream pb.GroupChat_ChatClient, inbox chan pb.ChatMessage) {
+	msg, _ := stream.Recv()
+	inbox <- *msg
+}
+
+func send(outbox chan pb.ChatMessage, r *bufio.Reader, name string, group string) {
+	msg, _ := r.ReadString('\n')
+	msg = strings.TrimSpace(msg)
+	outbox <- pb.ChatMessage{Name: name, Message: msg, Group: group}
+}
 
 func main() {
 	r := bufio.NewReader(os.Stdin)
@@ -39,31 +51,38 @@ func main() {
 	c := pb.NewGroupChatClient(conn)
 
 	fmt.Printf("\nYou have successfully connected to %s! To disconnect, hit ctrl+c or type exit.\n", address)
+	fmt.Println("Enter your name: ")
+	name, err := r.ReadString('\n')
+	if err != nil {
+		return
+	}
+	name = strings.TrimSpace(name)
+	fmt.Println("\nEnter your group: ")
+	group, err := r.ReadString('\n')
+	if err != nil {
+		return
+	}
+	group = strings.TrimSpace(group)
+	stream, err := c.Chat(context.Background())
+	if err != nil {
+		return
+	}
 
+	//Register client on server
+	stream.Send(&pb.ChatMessage{Name: name, Message: "reg", Group: group})
 	// Keep connection alive until ctrl+c or exit is entered.
-	for true {
-		fmt.Print("Enter Message: ")
-		tCmd, _ := r.ReadString('\n')
 
-		// This strips off any trailing whitespace/carriage returns.
-		tCmd = strings.TrimSpace(tCmd)
-		cmdName := "arjunyel"
+	inbox := make(chan pb.ChatMessage, 1000)
+	go listen(stream, inbox)
+	outbox := make(chan pb.ChatMessage, 1000)
+	go send(outbox, r, name, group)
 
-		//cmdArgs := string{}
-		cmdArgs := tCmd
-
-		// Close the connection if the user enters exit.
-		if cmdName == "exit" {
-			break
+	for {
+		select {
+		case sending := <-outbox:
+			stream.Send(&sending)
+		case receive := <-inbox:
+			fmt.Printf("%s - %s\n", receive.Name, receive.Message)
 		}
-
-		// Gets the response of the shell comm and from the server.
-		res, err := c.Chat(client pb.GroupChatClient)
-
-		if err != nil {
-			log.Fatalf("Command failed: %v", err)
-		}
-
-		log.Printf("    %s", res.Message)
 	}
 }
