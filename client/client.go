@@ -17,20 +17,22 @@ const (
 )
 
 func listen(stream pb.GroupChat_ChatClient, inbox chan pb.ChatMessage) {
-	msg, _ := stream.Recv()
-	inbox <- *msg
+	for {
+		msg, _ := stream.Recv()
+		inbox <- *msg
+	}
 }
 
-func send(outbox chan pb.ChatMessage, r *bufio.Scanner, name string, group string) {
-	for r.Scan() {
-		fmt.Println("sending Message")
-		outbox <- pb.ChatMessage{Name: name, Message: r.Text(), Group: group}
+func send(outbox chan pb.ChatMessage, r *bufio.Reader, name string, group string) {
+	for {
+		msg, _ := r.ReadString('\n')
+		outbox <- pb.ChatMessage{Name: name, Message: msg, Group: group}
 	}
 
 }
 
 func main() {
-	r := bufio.NewScanner(os.Stdin)
+	r := bufio.NewReader(os.Stdin)
 
 	// Read the server address
 	/*fmt.Print("Please specify the server IP: ")
@@ -53,12 +55,10 @@ func main() {
 
 	fmt.Printf("\nYou have successfully connected to %s! To disconnect, hit ctrl+c or type exit.\n", address)
 	fmt.Println("Enter your name: ")
-	r.Scan()
-	name := r.Text()
+	name, _ := r.ReadString('\n')
 
 	fmt.Println("\nEnter your group: ")
-	r.Scan()
-	group := r.Text()
+	group, _ := r.ReadString('\n')
 	stream, err := c.Chat(context.Background())
 	if err != nil {
 		return
@@ -76,6 +76,7 @@ func main() {
 	for {
 		select {
 		case sending := <-outbox:
+			fmt.Println("sending " + sending.Message + " from " + sending.Name + " to " + sending.Group)
 			stream.Send(&sending)
 		case receive := <-inbox:
 			fmt.Printf("%s - %s\n", receive.Name, receive.Message)

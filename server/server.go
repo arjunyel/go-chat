@@ -11,6 +11,8 @@ import (
 
 	"fmt"
 
+	"strconv"
+
 	pb "github.com/arjunyel/go-chat"
 )
 
@@ -43,11 +45,7 @@ func addUser(group string, user userInfo) {
 	dirct := directory.groups[group]
 	dirct = append(dirct, user)
 	directory.groups[group] = dirct
-	fmt.Println("adding User")
-	fmt.Println(user)
-	fmt.Println(dirct)
-	fmt.Println(directory.groups[group])
-
+	fmt.Println(directory.groups)
 }
 
 func createGroup(group string, user userInfo) {
@@ -70,16 +68,15 @@ func register(group string, user userInfo) {
 }
 
 func sendMessage(message pb.ChatMessage) {
-	directory.RLock()
-	defer directory.RUnlock()
+	directory.Lock()
+	defer directory.Unlock()
+	fmt.Println("sending " + message.Message + " from " + message.Name + " to " + message.Group)
 	userList := directory.groups[message.Group]
 	for _, user := range userList {
 		if user.name != message.Name {
 			user.channel <- message
 		}
 	}
-	fmt.Println(message)
-	fmt.Println(directory.groups)
 
 }
 func monitorOutbox(stream pb.GroupChat_ChatServer, message chan<- pb.ChatMessage) {
@@ -102,12 +99,21 @@ func (s *server) Chat(stream pb.GroupChat_ChatServer) error {
 	}
 	outbox := make(chan pb.ChatMessage, 1000)
 	go monitorOutbox(stream, outbox)
-
+	var u = directory.groups[in.Group]
+	var index int
+	for i, user := range u {
+		if in.Name == user.name {
+			fmt.Println("found " + user.name + " at index " + strconv.Itoa(i))
+			index = i
+		}
+	}
 	for {
 		select {
 		case outgoing := <-outbox:
+			fmt.Println("Sending message channel")
 			sendMessage(outgoing)
-		case incoming := <-inbox:
+		case incoming := <-directory.groups[in.Group][index].channel:
+			fmt.Println(directory.groups[in.Group][index].channel)
 			stream.Send(&incoming)
 		}
 	}
