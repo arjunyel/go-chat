@@ -11,8 +11,6 @@ import (
 
 	"fmt"
 
-	"strconv"
-
 	pb "github.com/arjunyel/go-chat"
 )
 
@@ -27,47 +25,45 @@ type userInfo struct {
 	channel chan pb.ChatMessage
 }
 
-var directory struct {
-	sync.RWMutex
-	groups map[string][]userInfo
+var directory struct { //directory of all groups with contained users
+	sync.RWMutex //embeded global mutex
+	groups       map[string][]userInfo
 }
 
-func doesGroupExist(group string) bool {
+func doesGroupExist(group string) bool { //check if group already exists
 	directory.RLock()
 	defer directory.RUnlock()
 	_, ok := directory.groups[group]
 	return ok
 }
 
-func addUser(group string, user userInfo) {
+func addUser(group string, user userInfo) { //add user to a group
 	directory.Lock()
 	defer directory.Unlock()
 	dirct := directory.groups[group]
 	dirct = append(dirct, user)
 	directory.groups[group] = dirct
-	fmt.Println(directory.groups)
+	return
 }
 
-func createGroup(group string, user userInfo) {
+func createGroup(group string, user userInfo) { //create a group and add the user
 	directory.Lock()
 	defer directory.Unlock()
 	slice := []userInfo{user}
 	directory.groups[group] = slice
 	return
 }
-func register(group string, user userInfo) {
+func register(group string, user userInfo) { //register client on first connect
 	exist := doesGroupExist(group)
 	if exist {
 		addUser(group, user)
 		return
 	}
 	createGroup(group, user)
-	fmt.Println(directory.groups)
 	return
-
 }
 
-func sendMessage(message pb.ChatMessage) {
+func sendMessage(message pb.ChatMessage) { //send message to group
 	directory.Lock()
 	defer directory.Unlock()
 	fmt.Println("sending " + message.Message + " from " + message.Name + " to " + message.Group)
@@ -79,7 +75,7 @@ func sendMessage(message pb.ChatMessage) {
 	}
 
 }
-func monitorOutbox(stream pb.GroupChat_ChatServer, message chan<- pb.ChatMessage) {
+func monitorOutbox(stream pb.GroupChat_ChatServer, message chan<- pb.ChatMessage) { //read in messages
 	msg, err := stream.Recv()
 	if err != nil {
 		fmt.Println(err)
@@ -89,31 +85,23 @@ func monitorOutbox(stream pb.GroupChat_ChatServer, message chan<- pb.ChatMessage
 }
 
 func (s *server) Chat(stream pb.GroupChat_ChatServer) error {
-	in, err := stream.Recv()
+	in, err := stream.Recv() //listen to stream from client
 	if err != nil {
 		return err
 	}
 	inbox := make(chan pb.ChatMessage, 1000)
-	if in.Message == "reg" { /*Register the client*/
+	if in.Message == "reg" { //register client on first connect
 		register(in.Group, userInfo{in.Name, inbox})
 	}
-	outbox := make(chan pb.ChatMessage, 1000)
+	outbox := make(chan pb.ChatMessage, 1000) //make channel for outgoing
 	go monitorOutbox(stream, outbox)
-	var u = directory.groups[in.Group]
-	var index int
-	for i, user := range u {
-		if in.Name == user.name {
-			fmt.Println("found " + user.name + " at index " + strconv.Itoa(i))
-			index = i
-		}
-	}
-	for {
+
+	for { //route messages from channels
 		select {
 		case outgoing := <-outbox:
 			fmt.Println("Sending message channel")
 			sendMessage(outgoing)
-		case incoming := <-directory.groups[in.Group][index].channel:
-			fmt.Println(directory.groups[in.Group][index].channel)
+		case incoming := <-inbox:
 			stream.Send(&incoming)
 		}
 	}
