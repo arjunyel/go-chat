@@ -3,15 +3,11 @@ syntax = "proto3";
 package gochat;
 
 service GroupChat {
-  rpc Chat (SendChat) returns (ReceiveChat) {}
+  rpc Chat (stream ChatMessage) returns (stream ChatMessage) {}
 }
 
-message SendChat {
+message ChatMessage {
     string name = 1;
     string message = 2;
-}
-
-message ReceiveChat {
-    string name = 1;
-    string message = 2;
+    string group = 3;
 }

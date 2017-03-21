@@ -9,8 +9,7 @@ It is generated from these files:
 	gochat.proto
 
 It has these top-level messages:
-	SendChat
-	ReceiveChat
+	ChatMessage
 */
 package gochat
 
@@ -34,57 +33,40 @@ var _ = math.Inf
 // proto package needs to be updated.
 const _ = proto.ProtoPackageIsVersion2 // please upgrade the proto package
 
-type SendChat struct {
+type ChatMessage struct {
 	Name    string `protobuf:"bytes,1,opt,name=name" json:"name,omitempty"`
 	Message string `protobuf:"bytes,2,opt,name=message" json:"message,omitempty"`
+	Group   string `protobuf:"bytes,3,opt,name=group" json:"group,omitempty"`
 }
 
-func (m *SendChat) Reset()                    { *m = SendChat{} }
-func (m *SendChat) String() string            { return proto.CompactTextString(m) }
-func (*SendChat) ProtoMessage()               {}
-func (*SendChat) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{0} }
+func (m *ChatMessage) Reset()                    { *m = ChatMessage{} }
+func (m *ChatMessage) String() string            { return proto.CompactTextString(m) }
+func (*ChatMessage) ProtoMessage()               {}
+func (*ChatMessage) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{0} }
 
-func (m *SendChat) GetName() string {
+func (m *ChatMessage) GetName() string {
 	if m != nil {
 		return m.Name
 	}
 	return ""
 }
 
-func (m *SendChat) GetMessage() string {
+func (m *ChatMessage) GetMessage() string {
 	if m != nil {
 		return m.Message
 	}
 	return ""
 }
 
-type ReceiveChat struct {
-	Name    string `protobuf:"bytes,1,opt,name=name" json:"name,omitempty"`
-	Message string `protobuf:"bytes,2,opt,name=message" json:"message,omitempty"`
-}
-
-func (m *ReceiveChat) Reset()                    { *m = ReceiveChat{} }
-func (m *ReceiveChat) String() string            { return proto.CompactTextString(m) }
-func (*ReceiveChat) ProtoMessage()               {}
-func (*ReceiveChat) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{1} }
-
-func (m *ReceiveChat) GetName() string {
+func (m *ChatMessage) GetGroup() string {
 	if m != nil {
-		return m.Name
-	}
-	return ""
-}
-
-func (m *ReceiveChat) GetMessage() string {
-	if m != nil {
-		return m.Message
+		return m.Group
 	}
 	return ""
 }
 
 func init() {
-	proto.RegisterType((*SendChat)(nil), "gochat.SendChat")
-	proto.RegisterType((*ReceiveChat)(nil), "gochat.ReceiveChat")
+	proto.RegisterType((*ChatMessage)(nil), "gochat.ChatMessage")
 }
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -98,7 +80,7 @@ const _ = grpc.SupportPackageIsVersion4
 // Client API for GroupChat service
 
 type GroupChatClient interface {
-	Chat(ctx context.Context, in *SendChat, opts ...grpc.CallOption) (*ReceiveChat, error)
+	Chat(ctx context.Context, opts ...grpc.CallOption) (GroupChat_ChatClient, error)
 }
 
 type groupChatClient struct {
@@ -109,53 +91,85 @@ func NewGroupChatClient(cc *grpc.ClientConn) GroupChatClient {
 	return &groupChatClient{cc}
 }
 
-func (c *groupChatClient) Chat(ctx context.Context, in *SendChat, opts ...grpc.CallOption) (*ReceiveChat, error) {
-	out := new(ReceiveChat)
-	err := grpc.Invoke(ctx, "/gochat.GroupChat/Chat", in, out, c.cc, opts...)
+func (c *groupChatClient) Chat(ctx context.Context, opts ...grpc.CallOption) (GroupChat_ChatClient, error) {
+	stream, err := grpc.NewClientStream(ctx, &_GroupChat_serviceDesc.Streams[0], c.cc, "/gochat.GroupChat/Chat", opts...)
 	if err != nil {
 		return nil, err
 	}
-	return out, nil
+	x := &groupChatChatClient{stream}
+	return x, nil
+}
+
+type GroupChat_ChatClient interface {
+	Send(*ChatMessage) error
+	Recv() (*ChatMessage, error)
+	grpc.ClientStream
+}
+
+type groupChatChatClient struct {
+	grpc.ClientStream
+}
+
+func (x *groupChatChatClient) Send(m *ChatMessage) error {
+	return x.ClientStream.SendMsg(m)
+}
+
+func (x *groupChatChatClient) Recv() (*ChatMessage, error) {
+	m := new(ChatMessage)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
 }
 
 // Server API for GroupChat service
 
 type GroupChatServer interface {
-	Chat(context.Context, *SendChat) (*ReceiveChat, error)
+	Chat(GroupChat_ChatServer) error
 }
 
 func RegisterGroupChatServer(s *grpc.Server, srv GroupChatServer) {
 	s.RegisterService(&_GroupChat_serviceDesc, srv)
 }
 
-func _GroupChat_Chat_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(SendChat)
-	if err := dec(in); err != nil {
+func _GroupChat_Chat_Handler(srv interface{}, stream grpc.ServerStream) error {
+	return srv.(GroupChatServer).Chat(&groupChatChatServer{stream})
+}
+
+type GroupChat_ChatServer interface {
+	Send(*ChatMessage) error
+	Recv() (*ChatMessage, error)
+	grpc.ServerStream
+}
+
+type groupChatChatServer struct {
+	grpc.ServerStream
+}
+
+func (x *groupChatChatServer) Send(m *ChatMessage) error {
+	return x.ServerStream.SendMsg(m)
+}
+
+func (x *groupChatChatServer) Recv() (*ChatMessage, error) {
+	m := new(ChatMessage)
+	if err := x.ServerStream.RecvMsg(m); err != nil {
 		return nil, err
 	}
-	if interceptor == nil {
-		return srv.(GroupChatServer).Chat(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/gochat.GroupChat/Chat",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(GroupChatServer).Chat(ctx, req.(*SendChat))
-	}
-	return interceptor(ctx, in, info, handler)
+	return m, nil
 }
 
 var _GroupChat_serviceDesc = grpc.ServiceDesc{
 	ServiceName: "gochat.GroupChat",
 	HandlerType: (*GroupChatServer)(nil),
-	Methods: []grpc.MethodDesc{
+	Methods:     []grpc.MethodDesc{},
+	Streams: []grpc.StreamDesc{
 		{
-			MethodName: "Chat",
-			Handler:    _GroupChat_Chat_Handler,
+			StreamName:    "Chat",
+			Handler:       _GroupChat_Chat_Handler,
+			ServerStreams: true,
+			ClientStreams: true,
 		},
 	},
-	Streams:  []grpc.StreamDesc{},
 	Metadata: "gochat.proto",
 }
 
@@ -164,12 +178,12 @@ func init() { proto.RegisterFile("gochat.proto", fileDescriptor0) }
 var fileDescriptor0 = []byte{
 	// 136 bytes of a gzipped FileDescriptorProto
 	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xe2, 0xe2, 0x49, 0xcf, 0x4f, 0xce,
-	0x48, 0x2c, 0xd1, 0x2b, 0x28, 0xca, 0x2f, 0xc9, 0x17, 0x62, 0x83, 0xf0, 0x94, 0x2c, 0xb8, 0x38,
-	0x82, 0x53, 0xf3, 0x52, 0x9c, 0x33, 0x12, 0x4b, 0x84, 0x84, 0xb8, 0x58, 0xf2, 0x12, 0x73, 0x53,
-	0x25, 0x18, 0x15, 0x18, 0x35, 0x38, 0x83, 0xc0, 0x6c, 0x21, 0x09, 0x2e, 0xf6, 0xdc, 0xd4, 0xe2,
-	0xe2, 0xc4, 0xf4, 0x54, 0x09, 0x26, 0xb0, 0x30, 0x8c, 0xab, 0x64, 0xcd, 0xc5, 0x1d, 0x94, 0x9a,
-	0x9c, 0x9a, 0x59, 0x96, 0x4a, 0xba, 0x66, 0x23, 0x1b, 0x2e, 0x4e, 0xf7, 0xa2, 0xfc, 0xd2, 0x02,
-	0xb0, 0x56, 0x7d, 0x2e, 0x16, 0x30, 0x2d, 0xa0, 0x07, 0x75, 0x22, 0xcc, 0x45, 0x52, 0xc2, 0x30,
-	0x11, 0x24, 0x9b, 0x94, 0x18, 0x92, 0xd8, 0xc0, 0x7e, 0x30, 0x06, 0x04, 0x00, 0x00, 0xff, 0xff,
-	0x1f, 0xaa, 0x3c, 0x21, 0xd3, 0x00, 0x00, 0x00,
+	0x48, 0x2c, 0xd1, 0x2b, 0x28, 0xca, 0x2f, 0xc9, 0x17, 0x62, 0x83, 0xf0, 0x94, 0x02, 0xb9, 0xb8,
+	0x9d, 0x33, 0x12, 0x4b, 0x7c, 0x53, 0x8b, 0x8b, 0x13, 0xd3, 0x53, 0x85, 0x84, 0xb8, 0x58, 0xf2,
+	0x12, 0x73, 0x53, 0x25, 0x18, 0x15, 0x18, 0x35, 0x38, 0x83, 0xc0, 0x6c, 0x21, 0x09, 0x2e, 0xf6,
+	0x5c, 0x88, 0xb4, 0x04, 0x13, 0x58, 0x18, 0xc6, 0x15, 0x12, 0xe1, 0x62, 0x4d, 0x2f, 0xca, 0x2f,
+	0x2d, 0x90, 0x60, 0x06, 0x8b, 0x43, 0x38, 0x46, 0xce, 0x5c, 0x9c, 0xee, 0x20, 0x06, 0xc8, 0x5c,
+	0x21, 0x33, 0x2e, 0x16, 0x30, 0x2d, 0xac, 0x07, 0xb5, 0x1e, 0xc9, 0x36, 0x29, 0x6c, 0x82, 0x4a,
+	0x0c, 0x1a, 0x8c, 0x06, 0x8c, 0x49, 0x6c, 0x60, 0x67, 0x1a, 0x03, 0x02, 0x00, 0x00, 0xff, 0xff,
+	0xc8, 0x38, 0xfe, 0xf8, 0xb6, 0x00, 0x00, 0x00,
 }
